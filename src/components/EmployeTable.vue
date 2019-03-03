@@ -1,30 +1,66 @@
 <template>
+  <div class="container">
 
-<div id="app"> 
-   
-  <button v-on:click="check" >check</button>
-  <button class="btn" v-on:click="addEmployee" >Toggle Enable</button>
- 
-  <pre>
-    {{ name  }}   
-  </pre>
+    <table class="table">
+      <thead class="thead">
+        <tr>
+          <th width="1">id</th>
+          <th width="10%">Name</th>
+          <th width="10%">Position</th>
+          <th width="10%">Salary</th>
+          <th width="10%">DateOfBirth</th>
+        </tr>
+      </thead>
+      <tbody>
 
-  <li v-for="item in employeesList" :key="item.id">
-    
+        <tr v-for="(employee, index) in employees" :key="index">
+          <td>{{ index + 1 }}</td>
 
-    {{ item }}
-    
-     
-    <input class="text" type="text" :id="item.id"> 
-    <button class="btn" v-on:click="check(item.id - 1)">edit</button>
-  
-  </li>
-  
-  <p>
-    <input v-model="newEmployee"> 
-  </p>
-</div>
+          <td>
+            <span v-if="editIndex !== index">{{ employee.name }}</span>
+            <span v-if="editIndex === index">
+              <input class="form-control" v-model="employee.name">
+            </span>           
+          </td>
 
+          <td>
+            <span v-if="editIndex !== index">{{ employee.position }}</span>
+            <span v-if="editIndex === index">
+              <input class="form-control" v-model="employee.position">
+            </span>           
+          </td>
+
+          <td>
+            <span v-if="editIndex !== index">{{ employee.salary }}</span>
+            <span v-if="editIndex === index">
+              <input class="form-control" v-model="employee.salary">
+            </span>           
+          </td>
+
+          <td>
+            <span v-if="editIndex !== index">{{ employee.dateOfBirth }}</span>
+            <span v-if="editIndex === index">
+              <input class="form-control" v-model="employee.dateOfBirth">
+            </span>           
+          </td>
+
+          <td>
+            <span v-if="editIndex !== index">
+              <button @click="edit(employee, index)" class="btn">Edit</button>
+              <button @click="remove(employee, index)" class="btn">Remove</button>
+            </span>
+            <span v-else>
+              <button class="btn" @click="cancel(employee)">Cancel</button>
+              <button class="btn" @click="save(employee)">Save</button>
+            </span>
+          </td>
+       </tr>
+      </tbody>
+    </table>
+    <div class="col-3">
+      <button v-show="!editIndex" @click="add" class="btn">Add employee</button>
+    </div>
+  </div> 
 </template>
 
 <script>
@@ -32,73 +68,82 @@
 import axios from 'axios'
 
 export default {
-    data: () => ({
-      /*
-      employee: {
-        name: '',
-        position: '',
-        salary: '',
-        dateOfBirth: Date
-      },
-      */
-      employee: '',
-      name: '',
-      employeesList: [],
-      newEmployee: ''
-    }),
 
-    mounted() {
-       axios.get('http://localhost:3000/Employee/')
+  name: 'employeesTable',
+
+  data: () => ({
+    editIndex: null,
+    originnalData: null,
+    employees: [],  
+  }),
+
+  mounted() {
+    axios.get('http://localhost:3000/Employee/')
           .then(response => {
-            console.log(response)
+            console.log(response)          
             this.saveEmployee(response)
           })
+  },
+
+  methods: {
+
+
+    postEmployee(employee) {
+      axios.post('http://localhost:3000/Employee/', { employee })
+        .then(response => console.log(response))
     },
 
-    methods: { 
+    patchEmployee(employee, index) {
+      axios.patch('http://localhost:3000/Employee/' + index, { employee })
+        .then(response => console.log(response))
+    },
 
-      check(i) {
-        //console.log(JSON.parse(localStorage.employees).data)
-        //console.log(this.employees)
-        let b = document.body.getElementsByClassName('btn')[i]
-        let t = document.body.getElementsByClassName('text')[i]
-    
-        if(t.disabled) {
-          t.disabled = false;      
-        } 
-        else t.disabled = true;   
-      },
+    saveEmployee(response) {
+      let parsed = JSON.stringify(response);
+      localStorage.setItem('employees', parsed);
+      this.employees = JSON.parse(localStorage.getItem('employees')).data;
+    },
 
-      removeEmployee(employee) {
+    cancel(employee) {
+      this.editIndex = null
 
-      },
-
-      addEmployee() {    
-        if (!this.newEmployee) {
-          return;
-        }
-
-        this.employeesList.push(this.newEmployee);
-        this.newEmployee = '';
-        this.saveEmployee(newEmployee)
-      },
-
-      saveEmployee(response) {
-        let parsed = JSON.stringify(response);
-        localStorage.setItem('employees', parsed);
-        this.employeesList = JSON.parse(localStorage.getItem('employees')).data;
-        
-        
-      },
-
-      fetchData() {
-        axios.get('http://localhost:3000/Employee/')
-          .then(response => {
-              this.saveEmployee(response)
-          })
+      if (!this.originalData) {
+        this.employees.splice(this.employees.indexOf(employee), 1)
+        return
       }
-   }
+
+      Object.assign(employee, this.originalData)
+      this.originalData = null
+    },
+
+    edit(employee, index) {
+      this.originalData = Object.assign({}, employee)
+      this.editIndex = index
+    },
+
+    remove(employee, index) {
+      this.employees.splice(index, 1)
+    },
+
+    save(employee) {
+      this.patchEmployee(employee, this.editIndex + 1)
+      this.originalData = null
+      this.editIndex = null   
+    },
+
+    add() {
+
+      this.originalData = null
+      this.employees.push({ name: '', position: '', salary: '', dateOfBirth: ''  })
+      this.editIndex = this.employees.length - 1
+      this.postEmployee({})
+    },
+  }, 
 }
-    
 </script>
 
+<style>
+ input[type="number"] {
+    text-align: right;
+  }
+</style>
