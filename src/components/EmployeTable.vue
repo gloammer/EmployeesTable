@@ -14,7 +14,7 @@
       <tbody>
 
         <tr v-for="(employee, index) in employees" :key="index">
-          <td>{{ index + 1 }}</td>
+          <td>{{ employee.id }}</td>
 
           <td>
             <span v-if="editIndex !== index">{{ employee.name }}</span>
@@ -78,7 +78,7 @@ export default {
   }),
 
   mounted() {
-    axios.get('http://localhost:3000/Employee/')
+    axios.get('http://localhost:3000/employee/')
           .then(response => {
             console.log(response)          
             this.saveEmployee(response)
@@ -87,14 +87,20 @@ export default {
 
   methods: {
 
+    deleteEmployee(index) {
+      axios.delete('http://localhost:3000/employee/' + index)
+        .then(response => console.log(response))
+    },
 
     postEmployee(employee) {
-      axios.post('http://localhost:3000/Employee/', { employee })
+      axios.post('http://localhost:3000/employee/', { name: employee.name  })
         .then(response => console.log(response))
     },
 
     patchEmployee(employee, index) {
-      axios.patch('http://localhost:3000/Employee/' + index, { employee })
+      axios.patch('http://localhost:3000/employee/' + index, { 
+          name: employee.name, position: employee.position, salary: employee.salary, dateOfBirth: employee.dateOfBirth  
+        })
         .then(response => console.log(response))
     },
 
@@ -105,6 +111,7 @@ export default {
     },
 
     cancel(employee) {
+
       this.editIndex = null
 
       if (!this.originalData) {
@@ -122,21 +129,21 @@ export default {
     },
 
     remove(employee, index) {
+      this.deleteEmployee(index)
       this.employees.splice(index, 1)
     },
 
-    save(employee) {
-      this.patchEmployee(employee, this.editIndex + 1)
+    save(employee) {    
+      this.patchEmployee(employee, this.editIndex)   
       this.originalData = null
       this.editIndex = null   
     },
 
-    add() {
-
-      this.originalData = null
-      this.employees.push({ name: '', position: '', salary: '', dateOfBirth: ''  })
-      this.editIndex = this.employees.length - 1
-      this.postEmployee({})
+    add() {  
+      this.originalData = null   
+      this.employees.push({ id: this.editIndex, name: '', position: '', salary: '', dateOfBirth: ''  })
+      this.postEmployee(this.employees)
+      this.editIndex = this.employees.length - 1        
     },
   }, 
 }
