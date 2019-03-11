@@ -2,6 +2,9 @@
   <div class="border">
 
     <table class="bordered">
+    <caption>
+      Employees Table
+    </caption
       <thead class="thead">
         <tr>
           <th width="1">id</th>
@@ -20,40 +23,39 @@
           <td>
             <span v-if="editIndex !== index">{{ employee.name }}</span>
             <span v-if="editIndex === index">
-              <input class="form-control" v-model="employee.name">
+              <input class="form-control" v-model="employee.name" v-on:input="validateForm(employee)" >
             </span>           
           </td>
 
           <td>
             <span v-if="editIndex !== index">{{ employee.position }}</span>
             <span v-if="editIndex === index">
-              <input class="form-control" v-model="employee.position">
+              <input class="form-control" v-model="employee.position" v-on:input="validateForm(employee)">
             </span>           
           </td>
 
           <td>
             <span v-if="editIndex !== index">{{ employee.salary }}</span>
             <span v-if="editIndex === index">
-              <input class="form-control" v-model="employee.salary">
+              <input class="form-control" v-model="employee.salary" v-on:input="validateForm(employee)">
             </span>           
           </td>
 
           <td>
             <span v-if="editIndex !== index">{{ employee.dateOfBirth }}</span>
             <span v-if="editIndex === index">
-              <input  type="date" class="form-control" v-model="employee.dateOfBirth">
+              <input  type="date" class="form-control" v-model="employee.dateOfBirth" v-on:input="validateForm(employee)">
             </span>           
           </td>
 
           <td>
             <span v-if="editIndex !== index">
-              <button @click="edit(employee, index)" class="btn">Edit</button>
-              <button @click="remove(employee, index)" class="btn">Remove</button>
+              <button @click="edit(employee, index)" class="btn" :disabled='isDisabledAdd'>Edit</button>
+              <button @click="remove(employee, index)" class="btn" :disabled='isDisabledAdd'>Remove</button>
             </span>
-            <span v-else>
-             
+            <span v-else>       
               <button class="btn" @click="cancel(employee)">Cancel</button>
-              <button class="btn" @click="save(employee)" v-bind:disabled="validated">Save</button>
+              <button  class="btn" @click="save(employee)" :disabled='isDisabledActions'>Save</button>
             </span>      
             
           </td>
@@ -61,7 +63,7 @@
       </tbody>
     </table>
     <div class="btnAddContainer">
-      <button @click="add" class="btnAdd">Add employee</button>
+      <button @click="add" class="btnAdd" :disabled='isDisabledAdd'>Add employee</button>
     </div>
   </div> 
 </template>
@@ -78,8 +80,19 @@ export default {
     editIndex: null,
     originnalData: null,
     employees: [],  
-    validated: false,
+    disabledActions: false,
+    disabledAdd: false,
   }),
+
+   computed: {
+  	isDisabledActions: function(){
+    	return this.disabledActions;
+    },
+
+    isDisabledAdd: function() {
+    	return this.disabledAdd;
+    },
+  },
 
   mounted() {
     this.getEmployees()
@@ -87,11 +100,22 @@ export default {
  
   methods: {
 
-    validateForm(employee) {
-      console.log(employee.name)
-      if(employee.name === ''){
-        this.validated = false
+    checkDate(employee) {
+      let date = new Date(employee.dateOfBirth);
+      let now = new Date();
+      if(date > now) {
+        return true
+      } else {
+        return false
       }
+    },
+
+    validateForm(employee) {   
+      if(!employee.position || !employee.name || !employee.salary || !employee.dateOfBirth || this.checkDate(employee)) {
+        this.disabledActions = true
+      } else {
+        this.disabledActions = false
+      }        
     },
 
     getEmployees() {
@@ -117,16 +141,16 @@ export default {
     },
 
     saveEmployee(response) {
-      console.log(response)
       let parsed = JSON.stringify(response);
       localStorage.setItem('employees', parsed);
       this.employees = JSON.parse(localStorage.getItem('employees')).data;
     },
 
     cancel(employee) {
+      this.disabledAdd = false
       this.editIndex = null
       if (!this.originalData) {
-        this.employees.splice(this.employees.indexOf(employee), 1)
+        this.remove(employee, this.employees.indexOf(employee))  
         return
       }
 
@@ -134,30 +158,33 @@ export default {
       this.originalData = null
     },
 
-    edit(employee, index) {
-      this.validateForm(employee) 
-      console.log(this.employees)
+    edit(employee, index) {  
+      this.disabledAdd = true      
       this.originalData = Object.assign({}, employee)
       this.editIndex = index    
     },
 
     remove(employee, index) {
-      this.deleteEmployee(employee.id)
+      this.deleteEmployee(employee.id) 
       this.employees.splice(index, 1)
+      localStorage.employees = JSON.stringify(this.employees)
     },
 
-    save(employee) {   
-      
+    save(employee) {
+      this.disabledAdd = false
       this.patchEmployee(employee, employee.id)  
+      localStorage.employees = JSON.stringify(this.employees)
       this.originalData = null
       this.editIndex = null   
     },
 
-    add() {  
+    add() { 
+      this.disabledAdd = true
       this.originalData = null   
-      this.employees.push({ id: this.employees.length + 1, name: '', position: '', salary: '', dateOfBirth: ''  })
+      this.employees.push({ id: this.employees.length + 1, name: '', position: '', salary: '', dateOfBirth: '' })
       this.postEmployee(this.employees[this.employees.lenght])
       this.editIndex = this.employees.length - 1
+      this.disabledActions = true
     },
   }, 
 }
@@ -165,108 +192,61 @@ export default {
 
 <style>
 
-
-
+input {
+	width: 200px;
+	font-size: 13px;
+	padding: 6px 0 4px 10px;
+	border: 1px solid #cecece;
+	background: #F6F6f6;
+	border-radius: 10px;
+}
 
 table {
- 
-    overflow:hidden;
-    border:1px solid #d3d3d3;
-    background:#fefefe;
-    width:70%;
-    margin:5% auto 0;
-    -moz-border-radius:5px; 
-    -webkit-border-radius:5px; 
-    border-radius:5px;
-    -moz-box-shadow: 0 0 4px rgba(0, 0, 0, 0.2);
-    -webkit-box-shadow: 0 0 4px rgba(0, 0, 0, 0.2);
+  font-family: "Lucida Sans Unicode", "Lucida Grande", Sans-Serif;
+  border-collapse: collapse;
+  color: #686461;
 }
- 
-th, td {
-    padding:10px;
-    text-align:center; 
+
+caption {
+  padding: 10px;
+  color: white;
+  background: #8FD4C1;
+  font-size: 18px;
+  text-align: left;
+  font-weight: bold;
 }
- 
+
 th {
-    padding-top:10px;
-    text-shadow: 1px 1px 1px #fff;
-    background:#e8eaeb;
+  border-bottom: 3px solid #B9B29F;
+  padding: 10px;
+  text-align: left;
 }
- 
-td {
-    border-top:1px solid #e0e0e0; 
-    border-right:1px solid #e0e0e0;
+
+tr:nth-child(odd) {
+  background: white;
 }
- 
-tr.odd-row td {
-    background:#f6f6f6;
-}
- 
-td.first, th.first {
-    text-align:left
-}
- 
-td.last {
-    border-right:none;
-}
- 
-td {
-    background: -moz-linear-gradient(100% 25% 90deg, #fefefe, #f9f9f9);
-   
-}
- 
-tr.odd-row td {
-    background: -moz-linear-gradient(100% 25% 90deg, #f6f6f6, #f1f1f1);
-  
-}
- 
-th {
-    background: -moz-linear-gradient(100% 20% 90deg, #e8eaeb, #ededed);
-  
-}
- 
-tr:first-child th.first {
-    -moz-border-radius-topleft:5px;
-    -webkit-border-top-left-radius:5px; 
-}
- 
-tr:first-child th.last {
-    -moz-border-radius-topright:5px;
-    -webkit-border-top-right-radius:5px; 
-}
- 
-tr:last-child td.first {
-    -moz-border-radius-bottomleft:5px;
-    -webkit-border-bottom-left-radius:5px; 
-}
- 
-tr:last-child td.last {
-    -moz-border-radius-bottomright:5px;
-    -webkit-border-bottom-right-radius:5px; 
+tr:nth-child(even) {
+  background: #E8E6D1;
 }
 
 .btn, .btnAdd {
+  border: 0px;
+  width: 100%;
+  height: 2em;
+  margin: 2px;
+  background: #8FD4C1;
 
-  
-  font-weight: 700;
-  color: white;
-  text-decoration: none;
-  padding: .8em 1em calc(.8em + 3px);
-  border-radius: 3px;
-  background: rgb(64,199,129);
-  box-shadow: 0 -3px rgb(53,167,110) inset;
-  transition: 0.2s;
-} 
+}
 
-.btn:hover, .btnAdd:hover { background: rgb(53, 167, 110); }
+input {outline:none;}
+
+.btn:hover, .btnAdd:hover {   
+  background: rgb(53, 167, 110); 
+}
 
 .btn:active, .btnAdd:active {
   background: rgb(33,147,90);
   box-shadow: 0 3px rgb(33,147,90) inset;
-}
-
-.btnAddContainer {
-  right: 500px
 }
 
 button:disabled,
@@ -275,6 +255,5 @@ button[disabled]{
   background-color: #cccccc;
   color: #666666;
 }
-
 
 </style>
